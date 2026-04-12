@@ -246,10 +246,12 @@ async function assignNumber(clientPhone, twilioNumber) {
   return { success: true };
 }
 
-async function startOutreach(specificPhones) {
+async function startOutreach(specificPhones, limit) {
   const targets = specificPhones ? leads.filter(l => specificPhones.includes(l.phone)) : leads;
+  const maxLeads = limit || 10;
   let count = 0;
   for (const lead of targets) {
+    if (count >= maxLeads) break;
     if (isBlacklisted(lead.phone)) { console.log('Skipping blacklisted:', lead.name); continue; }
     if (conversations[lead.phone]) { console.log('Already contacted:', lead.name); continue; }
     const openingMessage = `Hi! I noticed ${lead.name} online. I help local ${lead.type.toLowerCase()}s automatically text back any missed calls so customers don't go elsewhere. Free 14 day trial — takes 2 mins to set up. Worth a quick chat?`;
@@ -264,7 +266,6 @@ async function startOutreach(specificPhones) {
   }
   await sendTelegram(`📤 <b>BrightSales outreach complete</b>\nMessaged ${count} new businesses.`);
 }
-
 app.post('/sms', (req, res) => {
   const from = req.body.From;
   const body = req.body.Body;
@@ -274,9 +275,9 @@ app.post('/sms', (req, res) => {
 });
 
 app.post('/start-outreach', async (req, res) => {
-  const { phones } = req.body || {};
+  const { phones, limit } = req.body || {};
   res.json({ message: 'Outreach started' });
-  startOutreach(phones).catch(console.error);
+  startOutreach(phones, limit).catch(console.error);
 });
 
 app.get('/conversations', (req, res) => {
