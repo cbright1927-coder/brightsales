@@ -1,27 +1,7 @@
 [
-  {
-    "name": "Inigma Hair Design",
-    "type": "Hair salon",
-    "phone": "+441633876870"
-  },
-  {
-    "name": "Michael & Alexander",
-    "type": "Hair salon",
-    "phone": "+441633862622"
-  },
-  {
-    "name": "Cwmbran Hair & Beauty Spa Express",
-    "type": "Hair salon",
-    "phone": "+441633864801"
-  },
-  {
-    "name": "Artisticutz",
-    "type": "Hair salon",
-    "phone": "+441633484566"
-  },
-  {
-    "name": "Classic Cutz",
-    "type": "Hair salon",
-    "phone": "+441633489452"
-  }
+  {"name":"Inigma Hair Design","type":"Hair salon","phone":"+441633876870"},
+  {"name":"Michael & Alexander","type":"Hair salon","phone":"+441633862622"},
+  {"name":"Cwmbran Hair & Beauty Spa Express","type":"Hair salon","phone":"+441633864801"},
+  {"name":"Artisticutz","type":"Hair salon","phone":"+441633484566"},
+  {"name":"Classic Cutz","type":"Hair salon","phone":"+441633489452"}
 ]
