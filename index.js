@@ -387,7 +387,7 @@ app.post('/find-leads', async (req, res) => {
         if (leads.find(l => l.phone === formattedPhone)) { skipped.push({ name, reason: 'already exists' }); continue; }
         if (closedDeals.find(d => d.phone === formattedPhone)) { skipped.push({ name, reason: 'already a client' }); continue; }
 
-        if (website) { skipped.push({ name, reason: 'has website' }); continue; }
+       
 
         leads.push({ name, type, phone: formattedPhone });
         newLeads.push({ name, phone: formattedPhone });
