@@ -19,7 +19,7 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .stat{background:#111318;border-radius:12px;padding:10px 8px;border:0.5px solid #1a1d2e;text-align:center}
 .stat-label{font-size:9px;color:#475569;margin-bottom:3px;font-weight:500}
 .stat-value{font-size:20px;font-weight:800}
-.green{color:#00c896}.red{color:#f87171}.amber{color:#fbbf24}.blue{color:#60a5fa}.white{color:#f0f0f0}.muted{color:#64748b}
+.green{color:#00c896}.red{color:#f87171}.amber{color:#fbbf24}.blue{color:#60a5fa}.white{color:#f0f0f0}.muted{color:#64748b}.purple{color:#a78bfa}
 .pad{padding:0 16px}
 .card{background:#111318;border-radius:16px;padding:14px 16px;margin-bottom:10px;border:0.5px solid #1a1d2e}
 .card-title{font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;font-weight:600}
@@ -29,6 +29,7 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .btn-blue{background:#1e3a5f;color:#60a5fa;border:0.5px solid #2a4a6f}
 .btn-red{background:#3b1f1f;color:#f87171;border:0.5px solid #7f1d1d}
 .btn-amber{background:#1c1200;color:#fbbf24;border:0.5px solid #92400e}
+.btn-purple{background:#1a0f35;color:#a78bfa;border:0.5px solid #4c1d95}
 .btn-sm{padding:7px 12px;font-size:11px;border-radius:8px;border:none;cursor:pointer;font-weight:600;transition:transform .1s;flex-shrink:0}
 .btn-sm:active{transform:scale(.96)}
 .input{width:100%;background:#0a0b0f;border:0.5px solid #1a1d2e;border-radius:10px;padding:11px 14px;color:#f0f0f0;font-size:13px;outline:none;margin-bottom:8px;font-family:-apple-system,sans-serif}
@@ -39,7 +40,7 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .lead-card:active{opacity:.8}
 .lead-card.closed{border-color:#166534;background:#0a1f14}
 .lead-card.paid{border-color:#1e3a5f;background:#0a0f1f}
-.lead-card.unpaid{border-color:#92400e;background:#1a1200}
+.lead-card.pending{border-color:#4c1d95;background:#0f0a1f}
 .lead-card.cancelled{border-color:#7f1d1d;background:#1f0a0a;opacity:.5}
 .lead-card.replied{border-color:#92400e;background:#1a1200}
 .lead-name{font-size:14px;font-weight:600;color:#f0f0f0;margin-bottom:2px}
@@ -48,10 +49,13 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .pill-new{background:#1a1d2e;color:#64748b}
 .pill-sent{background:#0f1f35;color:#60a5fa}
 .pill-replied{background:#1a1200;color:#fbbf24}
+.pill-pending{background:#1a0f35;color:#a78bfa}
 .pill-trial{background:#130f1f;color:#a78bfa}
 .pill-paid{background:#0a1f14;color:#00c896}
 .pill-unpaid{background:#1a1200;color:#fbbf24}
 .pill-cancelled{background:#1f0a0a;color:#f87171}
+.pill-available{background:#0a1f14;color:#00c896}
+.pill-assigned{background:#0f1f35;color:#60a5fa}
 .chat-view{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0a0b0f;z-index:100;flex-direction:column}
 .chat-view.open{display:flex}
 .chat-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:0.5px solid #1a1d2e;flex-shrink:0}
@@ -72,19 +76,43 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .src-lead{background:#0f1f35;color:#60a5fa}
 .src-client{background:#0a1f14;color:#00c896}
 .src-cancelled{background:#1f0a0a;color:#f87171}
+.inv-card{background:#0a0b0f;border-radius:12px;padding:12px 14px;margin-bottom:8px;border:0.5px solid #1a1d2e;display:flex;align-items:center;justify-content:space-between}
+.inv-card.available{border-color:#166534;background:#0a1f14}
+.inv-card.assigned{border-color:#1e3a5f;background:#0a0f1f;opacity:.6}
+.assign-modal{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:200;align-items:center;justify-content:center;padding:20px}
+.assign-modal.open{display:flex}
+.assign-box{background:#111318;border-radius:20px;padding:20px;width:100%;border:0.5px solid #1a1d2e}
+.assign-title{font-size:16px;font-weight:700;color:#f0f0f0;margin-bottom:6px}
+.assign-sub{font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.5}
+.num-option{background:#0a0b0f;border-radius:10px;padding:12px 14px;margin-bottom:8px;border:0.5px solid #166534;cursor:pointer;transition:all .15s}
+.num-option:active{transform:scale(.98)}
+.num-option-number{font-size:14px;font-weight:600;color:#00c896}
+.num-option-label{font-size:11px;color:#64748b;margin-top:2px}
 .empty{color:#475569;font-size:13px;text-align:center;padding:24px 0}
 .success-banner{background:#0a1f14;border:0.5px solid #166534;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#00c896;display:none}
 .success-banner.show{display:block}
 .error-banner{background:#1f0a0a;border:0.5px solid #7f1d1d;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#f87171;display:none}
 .error-banner.show{display:block}
+.pending-alert{background:#0f0a1f;border:0.5px solid #4c1d95;border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+.pending-alert-title{font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:2px}
+.pending-alert-sub{font-size:11px;color:#64748b}
 .nav{display:flex;background:#0a0b0f;border-top:0.5px solid #1a1d2e;padding-top:8px;padding-bottom:env(safe-area-inset-bottom,14px);flex-shrink:0}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;background:none;border:none;cursor:pointer;color:#475569;font-size:10px;font-weight:500}
 .nav-btn.active{color:#00c896}
 .nav-icon{width:22px;height:22px;margin-bottom:1px}
-.divider{height:0.5px;background:#1a1d2e;margin:8px 0}
+.notif-dot{width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;margin-left:2px;vertical-align:middle}
 </style>
 </head>
 <body>
+
+<div id="assign-modal" class="assign-modal">
+  <div class="assign-box">
+    <div class="assign-title" id="assign-title">Assign Twilio number</div>
+    <div class="assign-sub" id="assign-sub">Pick an available number from your inventory</div>
+    <div id="assign-options"></div>
+    <button class="btn btn-red" style="margin-top:4px" onclick="closeAssignModal()">Cancel</button>
+  </div>
+</div>
 
 <div id="chat-view" class="chat-view">
   <div class="chat-header">
@@ -106,12 +134,13 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
       <div class="stat"><div class="stat-label">Leads</div><div class="stat-value white" id="s-total">0</div></div>
       <div class="stat"><div class="stat-label">Replied</div><div class="stat-value amber" id="s-replied">0</div></div>
       <div class="stat"><div class="stat-label">Clients</div><div class="stat-value green" id="s-closed">0</div></div>
-      <div class="stat"><div class="stat-label">Cancelled</div><div class="stat-value red" id="s-cancelled">0</div></div>
+      <div class="stat"><div class="stat-label">Numbers</div><div class="stat-value purple" id="s-numbers">0</div></div>
     </div>
     <div class="pad">
+      <div id="pending-section"></div>
       <button class="btn btn-green" onclick="fireAll()">🚀 Start outreach to new leads</button>
       <div class="card">
-        <div class="card-title">All leads & clients</div>
+        <div class="card-title">All leads</div>
         <div id="leads-list"><div class="empty">No leads yet</div></div>
       </div>
     </div>
@@ -150,8 +179,25 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
         <button class="btn btn-green" onclick="addLead()">Add lead</button>
       </div>
       <div class="card">
-        <div class="card-title">Finding leads tip</div>
-        <div style="font-size:13px;color:#64748b;line-height:1.7">Search Google Maps for "hair salon [town]" — best targets have no online booking. Use the Search tab first to check if a number is already in the database!</div>
+        <div class="card-title">Tip</div>
+        <div style="font-size:13px;color:#64748b;line-height:1.7">Search Google Maps for "hair salon [town]". Use the Search tab first to check if a number is already in the database!</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="inventory-screen" class="screen">
+    <div class="header"><h1>Numbers <span>Inventory</span></h1></div>
+    <div class="pad">
+      <div id="inv-success" class="success-banner">Number added to inventory!</div>
+      <div class="card">
+        <div class="card-title">Add number to inventory</div>
+        <input class="input" id="inv-number" placeholder="e.g. +447700900123">
+        <input class="input" id="inv-name" placeholder="Friendly name e.g. UK Mobile 1">
+        <button class="btn btn-purple" onclick="addToInventory()">Add number</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Available numbers <span id="available-count" style="color:#00c896"></span></div>
+        <div id="inventory-list"><div class="empty">No numbers yet — buy some in Twilio and add them here</div></div>
       </div>
     </div>
   </div>
@@ -164,7 +210,7 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
         <div id="clients-list"><div class="empty">No active clients yet</div></div>
       </div>
       <div class="card">
-        <div class="card-title">Cancelled clients</div>
+        <div class="card-title">Cancelled</div>
         <div id="cancelled-list"><div class="empty">No cancellations</div></div>
       </div>
     </div>
@@ -184,6 +230,10 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
     Add
   </button>
+  <button class="nav-btn" onclick="showScreen('inventory-screen',this)">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    Numbers
+  </button>
   <button class="nav-btn" onclick="showScreen('clients-screen',this)">
     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Clients
@@ -191,8 +241,9 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 </nav>
 
 <script>
-let appData = { conversations:{}, closedDeals:[], cancelledClients:[], leads:[], clientStatuses:{} };
+let appData = { conversations:{}, closedDeals:[], cancelledClients:[], leads:[], clientStatuses:{}, pendingAssignment:[], twilioInventory:[] };
 let currentPhone = null;
+let assigningPhone = null;
 
 function showScreen(id, btn) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -205,22 +256,41 @@ async function loadData() {
   try {
     const res = await fetch('/conversations');
     appData = await res.json();
-    renderLeads();
-    renderClients();
-    updateStats();
+    renderAll();
   } catch(e) { console.error(e); }
+}
+
+function renderAll() {
+  updateStats();
+  renderPending();
+  renderLeads();
+  renderClients();
+  renderInventory();
 }
 
 function updateStats() {
   const leads = appData.leads || [];
   const closed = appData.closedDeals || [];
-  const cancelled = appData.cancelledClients || [];
   const convs = Object.values(appData.conversations || {});
-  const replied = convs.filter(c => c.messages && c.messages.length > 1 && c.messages[c.messages.length-1].role === 'user').length;
+  const replied = convs.filter(c => c.messages && c.messages.length > 1 && c.messages[c.messages.length-1].role==='user').length;
+  const inv = appData.twilioInventory || [];
+  const available = inv.filter(n => n.status === 'available').length;
   document.getElementById('s-total').textContent = leads.length;
   document.getElementById('s-replied').textContent = replied;
   document.getElementById('s-closed').textContent = closed.length;
-  document.getElementById('s-cancelled').textContent = cancelled.length;
+  document.getElementById('s-numbers').textContent = available;
+}
+
+function renderPending() {
+  const pending = appData.pendingAssignment || [];
+  const el = document.getElementById('pending-section');
+  if (!pending.length) { el.innerHTML = ''; return; }
+  el.innerHTML = pending.map(p =>
+    `<div class="pending-alert" onclick="openAssignModal('${p.phone}','${p.name}')">
+      <div class="pending-alert-title">⚡ Assign number — ${p.name}</div>
+      <div class="pending-alert-sub">Deal closed — tap to assign a Twilio number and activate service</div>
+    </div>`
+  ).join('');
 }
 
 function getStatus(phone) {
@@ -228,12 +298,14 @@ function getStatus(phone) {
   if (statuses[phone]) return statuses[phone];
   const cancelled = appData.cancelledClients || [];
   if (cancelled.find(c => c.phone === phone)) return 'cancelled';
+  const pending = appData.pendingAssignment || [];
+  if (pending.find(p => p.phone === phone)) return 'pending';
   const closed = appData.closedDeals || [];
   if (closed.find(d => d.phone === phone)) return 'trial';
   const conv = (appData.conversations || {})[phone];
   if (!conv) return 'new';
   if (conv.messages && conv.messages.length > 1) {
-    return conv.messages[conv.messages.length-1].role === 'user' ? 'replied' : 'sent';
+    return conv.messages[conv.messages.length-1].role==='user' ? 'replied' : 'sent';
   }
   return 'sent';
 }
@@ -243,6 +315,7 @@ function pillHtml(status) {
     new:'<span class="status-pill pill-new">New</span>',
     sent:'<span class="status-pill pill-sent">Sent</span>',
     replied:'<span class="status-pill pill-replied">Replied!</span>',
+    pending:'<span class="status-pill pill-pending">⚡ Assign number</span>',
     trial:'<span class="status-pill pill-trial">Trial</span>',
     paid:'<span class="status-pill pill-paid">Paid ✓</span>',
     unpaid:'<span class="status-pill pill-unpaid">Unpaid</span>',
@@ -257,15 +330,13 @@ function renderLeads() {
   const convPhones = Object.keys(appData.conversations || {});
   const allPhones = [...new Set([...leads.map(l=>l.phone), ...convPhones])];
   if (!allPhones.length) { el.innerHTML = '<div class="empty">No leads yet — add some!</div>'; return; }
-
   const items = allPhones.map(phone => {
     const lead = leads.find(l=>l.phone===phone) || (appData.conversations[phone]||{}).lead || {name:phone,type:'Unknown'};
     return { phone, lead, status: getStatus(phone) };
   }).sort((a,b) => {
-    const o = {replied:0,trial:1,unpaid:2,sent:3,paid:4,new:5,cancelled:6};
-    return (o[a.status]||5)-(o[b.status]||5);
+    const o = {pending:0,replied:1,trial:2,unpaid:3,sent:4,paid:5,new:6,cancelled:7};
+    return (o[a.status]||6)-(o[b.status]||6);
   });
-
   el.innerHTML = items.map(({phone,lead,status}) =>
     `<div class="lead-card ${status==='trial'||status==='paid'?'closed':status}" onclick="openChat('${phone}')">
       <div class="lead-name">${lead.name}${pillHtml(status)}</div>
@@ -274,17 +345,30 @@ function renderLeads() {
   ).join('');
 }
 
+function renderInventory() {
+  const inv = appData.twilioInventory || [];
+  const el = document.getElementById('inventory-list');
+  const available = inv.filter(n=>n.status==='available');
+  const countEl = document.getElementById('available-count');
+  countEl.textContent = available.length ? `(${available.length} available)` : '';
+  if (!inv.length) { el.innerHTML = '<div class="empty">No numbers yet — buy in Twilio then add here</div>'; return; }
+  el.innerHTML = inv.map(n =>
+    `<div class="inv-card ${n.status}">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:${n.status==='available'?'#00c896':'#64748b'}">${n.number}</div>
+        <div style="font-size:11px;color:#475569;margin-top:2px">${n.friendlyName} ${n.assignedTo?'· Assigned to '+n.assignedTo:''}</div>
+      </div>
+      <span class="status-pill ${n.status==='available'?'pill-available':'pill-assigned'}">${n.status==='available'?'Available':'Assigned'}</span>
+    </div>`
+  ).join('');
+}
+
 function renderClients() {
   const active = document.getElementById('clients-list');
-  const cancelled = document.getElementById('cancelled-list');
+  const cancelledEl = document.getElementById('cancelled-list');
   const closed = appData.closedDeals || [];
   const cancelledList = appData.cancelledClients || [];
-
-  const activeClients = closed.filter(d => {
-    const s = getStatus(d.phone);
-    return s !== 'cancelled';
-  });
-
+  const activeClients = closed.filter(d => getStatus(d.phone) !== 'cancelled');
   if (!activeClients.length) {
     active.innerHTML = '<div class="empty">No active clients yet</div>';
   } else {
@@ -292,21 +376,63 @@ function renderClients() {
       const s = getStatus(d.phone);
       return `<div class="lead-card ${s==='paid'?'paid':'closed'}" onclick="openChat('${d.phone}')">
         <div class="lead-name">${d.name}${pillHtml(s)}</div>
-        <div class="lead-meta">${d.type} · Closed ${new Date(d.closedAt).toLocaleDateString()}</div>
+        <div class="lead-meta">${d.type} · ${d.twilioNumber||'Number not assigned'}</div>
       </div>`;
     }).join('');
   }
-
   if (!cancelledList.length) {
-    cancelled.innerHTML = '<div class="empty">No cancellations</div>';
+    cancelledEl.innerHTML = '<div class="empty">No cancellations</div>';
   } else {
-    cancelled.innerHTML = cancelledList.map(c =>
+    cancelledEl.innerHTML = cancelledList.map(c =>
       `<div class="lead-card cancelled">
         <div class="lead-name">${c.name}${pillHtml('cancelled')}</div>
-        <div class="lead-meta">Cancelled ${new Date(c.cancelledAt).toLocaleDateString()} · ${c.reason||'manual'}</div>
+        <div class="lead-meta">Cancelled ${new Date(c.cancelledAt).toLocaleDateString()}</div>
       </div>`
     ).join('');
   }
+}
+
+function openAssignModal(phone, name) {
+  assigningPhone = phone;
+  document.getElementById('assign-title').textContent = `Assign number to ${name}`;
+  document.getElementById('assign-sub').textContent = 'Pick an available number from your inventory to activate their service';
+  const available = (appData.twilioInventory||[]).filter(n=>n.status==='available');
+  const el = document.getElementById('assign-options');
+  if (!available.length) {
+    el.innerHTML = '<div style="text-align:center;color:#f87171;font-size:13px;padding:16px">No available numbers! Add some in the Numbers tab first.</div>';
+  } else {
+    el.innerHTML = available.map(n =>
+      `<div class="num-option" onclick="confirmAssign('${n.number}')">
+        <div class="num-option-number">${n.number}</div>
+        <div class="num-option-label">${n.friendlyName}</div>
+      </div>`
+    ).join('');
+  }
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+function closeAssignModal() {
+  document.getElementById('assign-modal').classList.remove('open');
+  assigningPhone = null;
+}
+
+async function confirmAssign(twilioNumber) {
+  if (!assigningPhone) return;
+  closeAssignModal();
+  try {
+    const res = await fetch('/assign-number', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ clientPhone: assigningPhone, twilioNumber })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Number assigned and setup guide sent!');
+      loadData();
+    } else {
+      alert('Error: ' + (data.error || 'unknown'));
+    }
+  } catch(e) { alert('Error assigning number'); }
 }
 
 function openChat(phone) {
@@ -314,13 +440,12 @@ function openChat(phone) {
   const conv = (appData.conversations||{})[phone];
   const leads = appData.leads || [];
   const closed = appData.closedDeals || [];
-  const lead = leads.find(l=>l.phone===phone) || conv?.lead || closed.find(d=>d.phone===phone) || {name:phone,type:''};
+  const pending = appData.pendingAssignment || [];
+  const lead = leads.find(l=>l.phone===phone) || conv?.lead || closed.find(d=>d.phone===phone) || pending.find(p=>p.phone===phone) || {name:phone,type:''};
   const status = getStatus(phone);
-
   document.getElementById('chat-lead-name').textContent = lead.name;
   document.getElementById('chat-lead-type').textContent = lead.type;
   document.getElementById('chat-status-pill').innerHTML = pillHtml(status);
-
   const msgs = document.getElementById('chat-messages-view');
   if (conv && conv.messages && conv.messages.length) {
     msgs.innerHTML = conv.messages.map(m =>
@@ -330,27 +455,27 @@ function openChat(phone) {
   } else {
     msgs.innerHTML = '<div class="empty">No messages yet</div>';
   }
-
   const bar = document.getElementById('action-bar');
   const dealData = closed.find(d=>d.phone===phone);
-
   if (status === 'cancelled') {
-    bar.innerHTML = '<div style="text-align:center;font-size:13px;color:#f87171;padding:8px">This client has cancelled — number is blacklisted</div>';
+    bar.innerHTML = '<div style="text-align:center;font-size:13px;color:#f87171;padding:8px">Cancelled — blacklisted</div>';
+  } else if (status === 'pending') {
+    bar.innerHTML = `<button class="btn btn-purple" style="margin:0" onclick="openAssignModal('${phone}','${lead.name}')">⚡ Assign Twilio number</button>`;
   } else if (status === 'trial' || status === 'paid' || status === 'unpaid') {
     bar.innerHTML = `
       <div class="action-row">
         <button class="btn-sm btn-green" style="flex:1" onclick="updateStatus('${phone}','paid')">Mark paid</button>
-        <button class="btn-sm btn-amber" style="flex:1" onclick="sendPaymentLink('${phone}','${lead.name}')">Send payment link</button>
+        <button class="btn-sm btn-amber" style="flex:1" onclick="sendPaymentLink('${phone}','${lead.name}')">Send link</button>
         <button class="btn-sm btn-red" style="flex:1" onclick="cancelClient('${phone}','${lead.name}')">Cancel</button>
       </div>
-      ${dealData ? `<div style="font-size:11px;color:#475569;padding:4px 2px">Custom reply: "${dealData.customMessage||'default'}"</div>` : ''}
+      ${dealData&&dealData.customMessage?`<div style="font-size:11px;color:#475569;padding:2px">Reply: "${dealData.customMessage}"</div>`:''}
+      ${dealData&&dealData.twilioNumber?`<div style="font-size:11px;color:#475569;padding:2px">Number: ${dealData.twilioNumber}</div>`:''}
     `;
   } else if (status === 'sent' || status === 'replied') {
-    bar.innerHTML = '<div style="text-align:center;font-size:13px;color:#64748b;padding:8px">Waiting for response — AI is handling this conversation</div>';
+    bar.innerHTML = '<div style="text-align:center;font-size:13px;color:#64748b;padding:8px">AI is handling this conversation</div>';
   } else {
     bar.innerHTML = `<button class="btn btn-green" style="margin:0" onclick="fireSingle('${phone}')">Send opening message</button>`;
   }
-
   document.getElementById('chat-view').classList.add('open');
 }
 
@@ -362,13 +487,9 @@ function closeChat() {
 
 async function fireSingle(phone) {
   try {
-    await fetch('/start-outreach', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({phones:[phone]})
-    });
+    await fetch('/start-outreach', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phones:[phone]}) });
     closeChat();
-  } catch(e) { alert('Error sending message'); }
+  } catch(e) { alert('Error'); }
 }
 
 async function fireAll() {
@@ -379,31 +500,41 @@ async function fireAll() {
 }
 
 async function updateStatus(phone, status) {
-  await fetch('/update-status', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({phone, status})
-  });
+  await fetch('/update-status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone,status}) });
   closeChat();
 }
 
 async function cancelClient(phone, name) {
-  if (!confirm(`Cancel ${name}? This will disable their missed call replies and blacklist their number.`)) return;
-  await fetch('/update-status', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({phone, status:'cancelled'})
-  });
+  if (!confirm(`Cancel ${name}? This will disable their missed call replies.`)) return;
+  await fetch('/update-status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone,status:'cancelled'}) });
   closeChat();
 }
 
 async function sendPaymentLink(phone, name) {
-  await fetch('/send-payment-link', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({phone, name})
-  });
+  await fetch('/send-payment-link', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone,name}) });
   alert('Payment link sent!');
+}
+
+async function addToInventory() {
+  let number = document.getElementById('inv-number').value.trim();
+  const name = document.getElementById('inv-name').value.trim() || number;
+  if (!number) { alert('Enter a number'); return; }
+  number = number.replace(/\s/g,'');
+  if (!number.startsWith('+')) number = '+44' + number.replace(/^0/,'');
+  try {
+    const res = await fetch('/add-inventory', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({number,friendlyName:name}) });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('inv-number').value='';
+      document.getElementById('inv-name').value='';
+      const s = document.getElementById('inv-success');
+      s.classList.add('show');
+      setTimeout(()=>s.classList.remove('show'),3000);
+      loadData();
+    } else {
+      alert(data.error||'Error adding number');
+    }
+  } catch(e) { alert('Error'); }
 }
 
 async function doSearch() {
@@ -411,15 +542,12 @@ async function doSearch() {
   const el = document.getElementById('search-results');
   if (!q) { el.innerHTML = '<div class="empty">Type to search</div>'; return; }
   try {
-    const res = await fetch('/search?q=' + encodeURIComponent(q));
+    const res = await fetch('/search?q='+encodeURIComponent(q));
     const data = await res.json();
-    if (!data.results.length) {
-      el.innerHTML = '<div class="empty">No results — safe to add as new lead!</div>';
-      return;
-    }
+    if (!data.results.length) { el.innerHTML = '<div class="empty">No results — safe to add as new lead!</div>'; return; }
     el.innerHTML = data.results.map(r => {
-      const srcLabel = r.source==='cancelled'?'Cancelled':r.source==='client'?'Client':'Lead';
       const srcClass = r.source==='cancelled'?'src-cancelled':r.source==='client'?'src-client':'src-lead';
+      const srcLabel = r.source==='cancelled'?'Cancelled':r.source==='client'?'Client':'Lead';
       return `<div class="search-result">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
           <span style="font-size:13px;font-weight:600;color:#f0f0f0">${r.name}</span>
@@ -436,16 +564,12 @@ async function addLead() {
   const name = document.getElementById('lead-name').value.trim();
   const type = document.getElementById('lead-type').value;
   let phone = document.getElementById('lead-phone').value.trim();
-  if (!name || !phone) { alert('Please fill in name and phone'); return; }
+  if (!name||!phone) { alert('Fill in name and phone'); return; }
   phone = phone.replace(/\s/g,'');
-  if (phone.startsWith('0')) phone = '+44' + phone.slice(1);
-  if (!phone.startsWith('+')) phone = '+44' + phone;
+  if (phone.startsWith('0')) phone = '+44'+phone.slice(1);
+  if (!phone.startsWith('+')) phone = '+44'+phone;
   try {
-    const res = await fetch('/add-lead', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name,type,phone})
-    });
+    const res = await fetch('/add-lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,type,phone}) });
     const data = await res.json();
     if (data.success) {
       document.getElementById('lead-name').value='';
@@ -456,11 +580,11 @@ async function addLead() {
       loadData();
     } else {
       const e = document.getElementById('add-error');
-      e.textContent = data.error || 'Error adding lead';
+      e.textContent = data.error||'Error';
       e.classList.add('show');
       setTimeout(()=>e.classList.remove('show'),4000);
     }
-  } catch(e) { alert('Error adding lead'); }
+  } catch(e) { alert('Error'); }
 }
 
 loadData();
