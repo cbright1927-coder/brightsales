@@ -2,6 +2,7 @@ const express = require('express');
 const twilio = require('twilio');
 const axios = require('axios');
 const fs = require('fs');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
@@ -15,24 +16,77 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BRIGHTREPLY_URL = process.env.BRIGHTREPLY_URL;
 const STRIPE_PAYMENT_LINK = process.env.STRIPE_PAYMENT_LINK;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 const client = twilio(TWILIO_SID, TWILIO_TOKEN);
 
+let db;
+let stateCol;
+let leadsCol;
 
-
-const DATA_FILE = 'data.json';
-
-function loadData() {
+async function connectDB() {
   try {
-    const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    return d;
+    const mongoClient = new MongoClient(MONGODB_URI);
+    await mongoClient.connect();
+    db = mongoClient.db('brightsales');
+    stateCol = db.collection('state');
+    leadsCol = db.collection('leads');
+    console.log('MongoDB connected');
   } catch(e) {
-    return {};
+    console.error('MongoDB connection error:', e.message);
   }
 }
 
-function saveData() {
-  const d = {
+async function loadState() {
+  try {
+    const doc = await stateCol.findOne({ _id: 'state' });
+    return doc || {};
+  } catch(e) { return {}; }
+}
+
+async function saveState(data) {
+  try {
+    await stateCol.replaceOne({ _id: 'state' }, { _id: 'state', ...data }, { upsert: true });
+  } catch(e) { console.error('Save state error:', e.message); }
+}
+
+async function loadLeads() {
+  try {
+    return await leadsCol.find({}).toArray();
+  } catch(e) { return []; }
+}
+
+async function saveLead(lead) {
+  try {
+    await leadsCol.updateOne({ phone: lead.phone }, { $set: lead }, { upsert: true });
+  } catch(e) { console.error('Save lead error:', e.message); }
+}
+
+let conversations = {};
+let closedDeals = [];
+let cancelledClients = [];
+let pendingAssignment = [];
+let twilioInventory = [];
+let clientStatuses = {};
+let declined = [];
+let leads = [];
+let autoBuyEnabled = false;
+
+async function initState() {
+  const saved = await loadState();
+  conversations = saved.conversations || {};
+  closedDeals = saved.closedDeals || [];
+  cancelledClients = saved.cancelledClients || [];
+  pendingAssignment = saved.pendingAssignment || [];
+  twilioInventory = saved.twilioInventory || [];
+  clientStatuses = saved.clientStatuses || {};
+  declined = saved.declined || [];
+  leads = await loadLeads();
+  console.log(`Loaded ${leads.length} leads from MongoDB`);
+}
+
+async function saveData() {
+  await saveState({
     conversations,
     closedDeals,
     cancelledClients,
@@ -40,28 +94,8 @@ function saveData() {
     pendingAssignment,
     twilioInventory,
     declined
-  };
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
-  } catch(e) {
-    console.error('Could not save data:', e.message);
-  }
+  });
 }
-
-const saved = loadData();
-const conversations = saved.conversations || {};
-const closedDeals = saved.closedDeals || [];
-const cancelledClients = saved.cancelledClients || [];
-const pendingAssignment = saved.pendingAssignment || [];
-const twilioInventory = saved.twilioInventory || [];
-const clientStatuses = saved.clientStatuses || {};
-const declined = saved.declined || [];
-function loadLeads() {
-  try { return JSON.parse(fs.readFileSync('leads.json', 'utf8')); }
-  catch(e) { return []; }
-}
-let leads = loadLeads();
-let autoBuyEnabled = false;
 
 async function sendTelegram(message) {
   try {
@@ -507,7 +541,16 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+async function start() {
+  await connectDB();
+  await initState();
+  app.listen(PORT, () => {
+    console.log('BrightSales running on port', PORT);
+    sendTelegram('💼 <b>BrightSales is online</b>\nReady to start outreach.');
+  });
+}
+
+start();
   console.log('BrightSales running on port', PORT);
   sendTelegram('💼 <b>BrightSales is online</b>\nReady to start outreach.');
 });
