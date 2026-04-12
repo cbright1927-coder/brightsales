@@ -19,7 +19,10 @@ const client = twilio(TWILIO_SID, TWILIO_TOKEN);
 
 const conversations = {};
 const closedDeals = [];
+const cancelledClients = [];
 const leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
+
+const clientStatuses = {};
 
 async function sendTelegram(message) {
   try {
@@ -35,11 +38,7 @@ async function sendTelegram(message) {
 
 async function sendSMS(to, body) {
   try {
-    await client.messages.create({
-      body,
-      from: SALES_NUMBER,
-      to
-    });
+    await client.messages.create({ body, from: SALES_NUMBER, to });
     console.log('SMS sent to', to);
   } catch(e) {
     console.error('SMS error:', e.message);
@@ -71,9 +70,9 @@ Your goal is to:
 1. Explain the service simply and clearly
 2. Handle any objections naturally and honestly
 3. Close the deal — get them to agree to try it free for 14 days
-4. Once they agree, ask them this exact question: "Almost done! What would you like your automatic text reply to say when customers call and get no answer? Keep it short and friendly — I will set it up exactly as you write it 😊"
-5. Wait for their reply with the custom message
-6. Once they give you their custom message, respond with exactly:
+4. Once they agree, ask them: "Almost done! What would you like your automatic text reply to say when customers call and get no answer? Keep it short and friendly — I will set it up exactly as you write it 😊"
+5. Wait for their custom message reply
+6. Once they give their custom message respond with exactly:
 DEAL_CLOSED
 CUSTOM_MESSAGE: [their exact message here]
 
@@ -113,19 +112,23 @@ Your 14 day free trial starts now. After that it is just £29/month — I will s
 Any questions just reply here! 😊`;
 }
 
+function isBlacklisted(phone) {
+  return cancelledClients.some(c => c.phone === phone);
+}
+
 async function handleReply(from, body) {
+  if (isBlacklisted(from)) {
+    console.log('Blacklisted number replied — ignoring:', from);
+    return;
+  }
   if (!conversations[from]) {
     console.log('Unknown number replied:', from);
     return;
   }
-
   const conv = conversations[from];
   conv.messages.push({ role: 'user', content: body });
-
   console.log(`Reply from ${conv.lead.name}: ${body}`);
-
   const reply = await askClaude(getSystemPrompt(conv.lead), conv.messages);
-
   if (reply.includes('DEAL_CLOSED')) {
     const lines = reply.split('\n');
     const customLine = lines.find(l => l.startsWith('CUSTOM_MESSAGE:'));
@@ -133,28 +136,24 @@ async function handleReply(from, body) {
     await handleDealClosed(from, conv, customMessage);
     return;
   }
-
   conv.messages.push({ role: 'assistant', content: reply });
   await sendSMS(from, reply);
 }
 
 async function handleDealClosed(phone, conv, customMessage) {
   const lead = conv.lead;
-  console.log('DEAL CLOSED:', lead.name, '| Custom message:', customMessage);
-
   const finalMessage = customMessage || `Hi! Sorry we missed your call at ${lead.name}. We will ring you back shortly — or reply here to book!`;
-
   closedDeals.push({
     name: lead.name,
     type: lead.type,
     phone,
     customMessage: finalMessage,
-    closedAt: new Date().toISOString()
+    closedAt: new Date().toISOString(),
+    status: 'trial'
   });
-
+  clientStatuses[phone] = 'trial';
   const setupGuide = getSetupGuide(lead, SALES_NUMBER);
   await sendSMS(phone, setupGuide);
-
   await sendTelegram(
     `🎉 <b>New client closed — ${lead.name}</b>\n` +
     `Type: ${lead.type}\n` +
@@ -162,77 +161,141 @@ async function handleDealClosed(phone, conv, customMessage) {
     `Custom message: ${finalMessage}\n` +
     `Time: ${new Date().toLocaleString()}`
   );
-
   try {
     await axios.post(`${BRIGHTREPLY_URL}/add-client`, {
-      name: lead.name,
-      type: lead.type,
-      phone,
-      twilioNumber: SALES_NUMBER,
-      message: finalMessage
+      name: lead.name, type: lead.type, phone,
+      twilioNumber: SALES_NUMBER, message: finalMessage
     });
-    console.log('Client added to BrightReply with custom message');
   } catch(e) {
-    console.log('Could not auto-add to BrightReply — add manually');
+    console.log('Could not auto-add to BrightReply');
   }
 }
 
-async function startOutreach() {
-  console.log('Starting outreach to', leads.length, 'leads');
-  await sendTelegram(`📤 <b>BrightSales starting outreach</b>\nMessaging ${leads.length} businesses now...`);
+async function startOutreach(specificPhones) {
+  const targets = specificPhones
+    ? leads.filter(l => specificPhones.includes(l.phone))
+    : leads;
 
-  for (const lead of leads) {
+  let count = 0;
+  for (const lead of targets) {
+    if (isBlacklisted(lead.phone)) {
+      console.log('Skipping blacklisted:', lead.name);
+      continue;
+    }
     if (conversations[lead.phone]) {
       console.log('Already contacted:', lead.name);
       continue;
     }
-
     const openingMessage = `Hi! I noticed ${lead.name} online. I help local ${lead.type.toLowerCase()}s automatically text back any missed calls so customers don't go elsewhere. Free 14 day trial — takes 2 mins to set up. Worth a quick chat?`;
-
     conversations[lead.phone] = {
       lead,
       messages: [{ role: 'assistant', content: openingMessage }],
       startedAt: new Date().toISOString()
     };
-
     await sendSMS(lead.phone, openingMessage);
+    count++;
     await new Promise(r => setTimeout(r, 3000));
   }
-
-  console.log('Outreach complete');
+  await sendTelegram(`📤 <b>BrightSales outreach complete</b>\nMessaged ${count} new businesses.`);
 }
 
 app.post('/sms', (req, res) => {
   const from = req.body.From;
   const body = req.body.Body;
-  console.log('Incoming SMS from', from, ':', body);
   handleReply(from, body).catch(console.error);
   res.set('Content-Type', 'text/xml');
   res.send('<Response></Response>');
 });
 
 app.post('/start-outreach', async (req, res) => {
+  const { phones } = req.body || {};
   res.json({ message: 'Outreach started' });
-  startOutreach().catch(console.error);
+  startOutreach(phones).catch(console.error);
 });
 
 app.get('/conversations', (req, res) => {
-  res.json({ conversations, closedDeals, leads });
+  res.json({ conversations, closedDeals, cancelledClients, leads, clientStatuses });
 });
 
 app.post('/add-lead', (req, res) => {
   const { name, type, phone } = req.body;
   if (!name || !phone) return res.json({ success: false, error: 'Missing fields' });
+  if (isBlacklisted(phone)) return res.json({ success: false, error: 'This number has cancelled — do not contact again' });
   const existing = leads.find(l => l.phone === phone);
   if (existing) return res.json({ success: false, error: 'Already exists' });
   leads.push({ name, type, phone });
   res.json({ success: true });
 });
 
+app.post('/update-status', async (req, res) => {
+  const { phone, status } = req.body;
+  if (!phone || !status) return res.json({ success: false });
+  clientStatuses[phone] = status;
+  const deal = closedDeals.find(d => d.phone === phone);
+  if (deal) deal.status = status;
+
+  if (status === 'cancelled') {
+    const name = deal ? deal.name : phone;
+    if (!cancelledClients.find(c => c.phone === phone)) {
+      cancelledClients.push({
+        phone,
+        name,
+        cancelledAt: new Date().toISOString(),
+        reason: 'manual'
+      });
+    }
+    try {
+      await axios.post(`${BRIGHTREPLY_URL}/cancel-client`, { phone });
+    } catch(e) {
+      console.log('Could not disable on BrightReply');
+    }
+    await sendTelegram(
+      `❌ <b>Client cancelled — ${name}</b>\n` +
+      `Phone: ${phone}\n` +
+      `Time: ${new Date().toLocaleString()}`
+    );
+  }
+
+  if (status === 'paid') {
+    const name = deal ? deal.name : phone;
+    await sendTelegram(
+      `💰 <b>Client paid — ${name}</b>\n` +
+      `Phone: ${phone}\n` +
+      `Time: ${new Date().toLocaleString()}`
+    );
+  }
+
+  res.json({ success: true });
+});
+
+app.post('/send-payment-link', async (req, res) => {
+  const { phone, name } = req.body;
+  const stripeLink = process.env.STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/your-link-here';
+  await sendSMS(phone, `Hi ${name}! Your 14 day free trial of BrightReply has ended. To continue receiving missed call replies, here is your payment link: ${stripeLink} — just £29/month, cancel any time. Any questions just reply here!`);
+  res.json({ success: true });
+});
+
+app.get('/search', (req, res) => {
+  const q = (req.query.q || '').toLowerCase().trim();
+  if (!q) return res.json({ results: [] });
+  const allEntries = [
+    ...leads.map(l => ({ ...l, source: 'lead' })),
+    ...closedDeals.map(d => ({ ...d, source: 'client' })),
+    ...cancelledClients.map(c => ({ ...c, source: 'cancelled' }))
+  ];
+  const seen = new Set();
+  const results = allEntries.filter(e => {
+    const match = (e.name || '').toLowerCase().includes(q) || (e.phone || '').includes(q);
+    if (!match || seen.has(e.phone)) return false;
+    seen.add(e.phone);
+    return true;
+  });
+  res.json({ results });
+});
+
 app.get('/', (req, res) => {
-  const fs2 = require('fs');
-  if (fs2.existsSync('dashboard.html')) {
-    res.send(fs2.readFileSync('dashboard.html', 'utf8'));
+  if (fs.existsSync('dashboard.html')) {
+    res.send(fs.readFileSync('dashboard.html', 'utf8'));
   } else {
     res.send('BrightSales is running');
   }
@@ -241,5 +304,5 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('BrightSales running on port', PORT);
-  sendTelegram('💼 <b>BrightSales is online</b>\nReady to start outreach. Send POST to /start-outreach to begin.');
+  sendTelegram('💼 <b>BrightSales is online</b>\nReady to start outreach.');
 });
