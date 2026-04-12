@@ -25,6 +25,7 @@ const pendingAssignment = [];
 const twilioInventory = [];
 const leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
 const clientStatuses = {};
+let autoBuyEnabled = false;
 
 async function sendTelegram(message) {
   try {
@@ -145,6 +146,27 @@ async function handleReply(from, body) {
 async function handleDealClosed(phone, conv, customMessage) {
   const lead = conv.lead;
   const finalMessage = customMessage || `Hi! Sorry we missed your call at ${lead.name}. We will ring you back shortly — or reply here to book!`;
+
+  const available = twilioInventory.filter(n => n.status === 'available');
+  if (available.length === 0 && autoBuyEnabled) {
+    try {
+      const numbers = await client.availablePhoneNumbers('GB').mobile.list({ limit: 1, smsEnabled: true });
+      if (numbers.length > 0) {
+        const purchased = await client.incomingPhoneNumbers.create({ phoneNumber: numbers[0].phoneNumber });
+        twilioInventory.push({
+          number: purchased.phoneNumber,
+          friendlyName: 'Auto-bought',
+          status: 'available',
+          addedAt: new Date().toISOString()
+        });
+        console.log('Auto-bought number:', purchased.phoneNumber);
+        await sendTelegram(`🤖 <b>Auto-bought Twilio number</b>\n${purchased.phoneNumber}\nAdded to inventory automatically.`);
+      }
+    } catch(e) {
+      console.log('Auto-buy failed:', e.message);
+      await sendTelegram(`⚠️ <b>Auto-buy failed</b>\n${e.message}\nPlease buy a number manually.`);
+    }
+  }
 
   pendingAssignment.push({
     phone,
@@ -317,6 +339,12 @@ app.post('/send-payment-link', async (req, res) => {
   const stripeLink = STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/your-link-here';
   await sendSMS(phone, `Hi ${name}! Your 14 day free trial of BrightReply has ended. To keep your missed call replies running it is just £29/month: ${stripeLink} — cancel any time. Any questions just reply here!`);
   res.json({ success: true });
+});
+
+app.post('/set-auto-buy', (req, res) => {
+  autoBuyEnabled = req.body.enabled === true;
+  console.log('Auto-buy set to:', autoBuyEnabled);
+  res.json({ success: true, autoBuyEnabled });
 });
 
 app.get('/search', (req, res) => {
