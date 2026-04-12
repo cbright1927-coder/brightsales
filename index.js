@@ -551,6 +551,4 @@ async function start() {
 }
 
 start();
-  console.log('BrightSales running on port', PORT);
-  sendTelegram('💼 <b>BrightSales is online</b>\nReady to start outreach.');
-});
+  
