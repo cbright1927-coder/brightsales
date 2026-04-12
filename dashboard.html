@@ -177,10 +177,30 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
         <input class="input" id="lead-phone" placeholder="Phone number e.g. 01633 123456">
         <button class="btn btn-green" onclick="addLead()">Add lead</button>
       </div>
-      <div class="card">
-        <div class="card-title">Tip</div>
-        <div style="font-size:13px;color:#64748b;line-height:1.7">Search Google Maps for "hair salon [town]". Use the Search tab first to check if a number is already in the database!</div>
-      </div>
+     <div class="card">
+  <div class="card-title">Auto find leads</div>
+  <div id="finder-success" class="success-banner"></div>
+  <div id="finder-error" class="error-banner"></div>
+  <input class="input" id="finder-town" placeholder="Town e.g. Cwmbran, Newport, Cardiff">
+  <select class="select" id="finder-type">
+    <option value="Hair salon">Hair salon</option>
+    <option value="Barber">Barber</option>
+    <option value="Beauty salon">Beauty salon</option>
+    <option value="Nail salon">Nail salon</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Garage">Garage</option>
+    <option value="Restaurant">Restaurant</option>
+    <option value="Takeaway">Takeaway</option>
+    <option value="Pub">Pub</option>
+  </select>
+  <button class="btn btn-green" id="finder-btn" onclick="findLeads()">🔍 Find leads automatically</button>
+  <div id="finder-results" style="margin-top:8px"></div>
+</div>
+<div class="card">
+  <div class="card-title">Tip</div>
+  <div style="font-size:13px;color:#64748b;line-height:1.7">Use Auto Find to discover businesses without websites — they rely on phone calls and are your best targets!</div>
+</div>
     </div>
   </div>
 
@@ -605,7 +625,51 @@ async function doSearch(){
     }).join('');
   }catch(e){el.innerHTML='<div class="empty">Search error</div>';}
 }
+async function findLeads() {
+  const town = document.getElementById('finder-town').value.trim();
+  const type = document.getElementById('finder-type').value;
+  const btn = document.getElementById('finder-btn');
+  const results = document.getElementById('finder-results');
+  const success = document.getElementById('finder-success');
+  const error = document.getElementById('finder-error');
 
+  if (!town) { alert('Enter a town first'); return; }
+
+  btn.textContent = '🔍 Searching...';
+  btn.disabled = true;
+  results.innerHTML = '';
+  success.classList.remove('show');
+  error.classList.remove('show');
+
+  try {
+    const res = await fetch('/find-leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ town, type })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      success.textContent = `Found ${data.found} new leads! Skipped ${data.skipped} (already exist, have websites, or no phone).`;
+      success.classList.add('show');
+      if (data.leads.length) {
+        results.innerHTML = data.leads.map(l =>
+          `<div style="font-size:12px;color:#00c896;padding:3px 0;border-bottom:0.5px solid rgba(255,255,255,.05)">✓ ${l.name} — ${l.phone}</div>`
+        ).join('');
+      }
+      loadData();
+    } else {
+      error.textContent = data.error || 'Something went wrong';
+      error.classList.add('show');
+    }
+  } catch(e) {
+    error.textContent = 'Error — try again';
+    error.classList.add('show');
+  }
+
+  btn.textContent = '🔍 Find leads automatically';
+  btn.disabled = false;
+}
 async function addLead(){
   const name=document.getElementById('lead-name').value.trim();
   const type=document.getElementById('lead-type').value;
