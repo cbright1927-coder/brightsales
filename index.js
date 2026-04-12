@@ -226,6 +226,21 @@ async function assignNumber(clientPhone, twilioNumber) {
   const idx = pendingAssignment.findIndex(p => p.phone === clientPhone);
   if (idx > -1) pendingAssignment.splice(idx, 1);
 
+  try {
+  await client.incomingPhoneNumbers.list({phoneNumber: twilioNumber}).then(async numbers => {
+    if(numbers.length > 0) {
+      await client.incomingPhoneNumbers(numbers[0].sid).update({
+        smsUrl: `${BRIGHTREPLY_URL}/sms`,
+        smsMethod: 'POST',
+        voiceUrl: `${BRIGHTREPLY_URL}/call`,
+        voiceMethod: 'POST'
+      });
+      console.log('Webhooks set for', twilioNumber);
+    }
+  });
+} catch(e) {
+  console.log('Could not set webhooks:', e.message);
+}
   const setupGuide = getSetupGuide(clientData, twilioNumber);
   await sendSMS(clientPhone, setupGuide);
 
