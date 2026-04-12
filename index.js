@@ -388,6 +388,7 @@ app.post('/start-outreach', async (req, res) => {
 });
 
 app.get('/conversations', (req, res) => {
+  if(req.query.key !== process.env.API_KEY) return res.status(401).json({ error: 'Unauthorised' }); (req, res) => {
   res.json({ conversations, closedDeals, cancelledClients, leads, clientStatuses, pendingAssignment, twilioInventory });
 });
 
