@@ -175,6 +175,10 @@ body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
           <option value="Other">Other</option>
         </select>
         <input class="input" id="lead-phone" placeholder="Phone number e.g. 01633 123456">
+        <div class="card">
+  <div class="card-title">Export & backup</div>
+  <button class="btn btn-blue" onclick="exportLeads()">📥 Download leads.json</button>
+</div>
         <button class="btn btn-green" onclick="addLead()">Add lead</button>
       </div>
      <div class="card">
@@ -670,7 +674,18 @@ async function findLeads() {
   btn.textContent = '🔍 Find leads automatically';
   btn.disabled = false;
 }
-async function addLead(){
+function exportLeads() {
+  fetch('/conversations').then(r => r.json()).then(data => {
+    const blob = new Blob([JSON.stringify(data.leads, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'leads.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+  async function addLead(){
   const name=document.getElementById('lead-name').value.trim();
   const type=document.getElementById('lead-type').value;
   let phone=document.getElementById('lead-phone').value.trim();
