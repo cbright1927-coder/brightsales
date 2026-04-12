@@ -14,14 +14,16 @@ const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BRIGHTREPLY_URL = process.env.BRIGHTREPLY_URL;
+const STRIPE_PAYMENT_LINK = process.env.STRIPE_PAYMENT_LINK;
 
 const client = twilio(TWILIO_SID, TWILIO_TOKEN);
 
 const conversations = {};
 const closedDeals = [];
 const cancelledClients = [];
+const pendingAssignment = [];
+const twilioInventory = [];
 const leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
-
 const clientStatuses = {};
 
 async function sendTelegram(message) {
@@ -143,49 +145,91 @@ async function handleReply(from, body) {
 async function handleDealClosed(phone, conv, customMessage) {
   const lead = conv.lead;
   const finalMessage = customMessage || `Hi! Sorry we missed your call at ${lead.name}. We will ring you back shortly — or reply here to book!`;
+
+  pendingAssignment.push({
+    phone,
+    name: lead.name,
+    type: lead.type,
+    customMessage: finalMessage,
+    closedAt: new Date().toISOString()
+  });
+
   closedDeals.push({
     name: lead.name,
     type: lead.type,
     phone,
     customMessage: finalMessage,
     closedAt: new Date().toISOString(),
-    status: 'trial'
+    status: 'pending'
   });
-  clientStatuses[phone] = 'trial';
-  const setupGuide = getSetupGuide(lead, SALES_NUMBER);
-  await sendSMS(phone, setupGuide);
+
+  clientStatuses[phone] = 'pending';
+
   await sendTelegram(
-    `🎉 <b>New client closed — ${lead.name}</b>\n` +
+    `🎉 <b>New deal closed — ${lead.name}</b>\n` +
     `Type: ${lead.type}\n` +
     `Phone: ${phone}\n` +
-    `Custom message: ${finalMessage}\n` +
-    `Time: ${new Date().toLocaleString()}`
+    `Custom message: ${finalMessage}\n\n` +
+    `⚠️ Open BrightSales app and assign a Twilio number to activate their service!`
   );
+
+  await sendSMS(phone, `Hi! Great news — your BrightReply service is almost ready. We are just setting up your dedicated number and will send you the activation instructions within the hour. Excited to have you on board! 😊`);
+}
+
+async function assignNumber(clientPhone, twilioNumber) {
+  const pending = pendingAssignment.find(p => p.phone === clientPhone);
+  const deal = closedDeals.find(d => d.phone === clientPhone);
+
+  if (!pending && !deal) return { success: false, error: 'Client not found' };
+
+  const clientData = pending || deal;
+
+  const inv = twilioInventory.find(n => n.number === twilioNumber);
+  if (inv) {
+    inv.status = 'assigned';
+    inv.assignedTo = clientData.name;
+    inv.assignedAt = new Date().toISOString();
+  }
+
+  if (deal) {
+    deal.twilioNumber = twilioNumber;
+    deal.status = 'trial';
+  }
+  clientStatuses[clientPhone] = 'trial';
+
+  const idx = pendingAssignment.findIndex(p => p.phone === clientPhone);
+  if (idx > -1) pendingAssignment.splice(idx, 1);
+
+  const setupGuide = getSetupGuide(clientData, twilioNumber);
+  await sendSMS(clientPhone, setupGuide);
+
   try {
     await axios.post(`${BRIGHTREPLY_URL}/add-client`, {
-      name: lead.name, type: lead.type, phone,
-      twilioNumber: SALES_NUMBER, message: finalMessage
+      name: clientData.name,
+      type: clientData.type,
+      phone: clientPhone,
+      twilioNumber,
+      message: clientData.customMessage
     });
   } catch(e) {
     console.log('Could not auto-add to BrightReply');
   }
+
+  await sendTelegram(
+    `✅ <b>Client activated — ${clientData.name}</b>\n` +
+    `Twilio number: ${twilioNumber}\n` +
+    `Setup guide sent!`
+  );
+
+  return { success: true };
 }
 
 async function startOutreach(specificPhones) {
-  const targets = specificPhones
-    ? leads.filter(l => specificPhones.includes(l.phone))
-    : leads;
-
+  const targets = specificPhones ? leads.filter(l => specificPhones.includes(l.phone)) : leads;
   let count = 0;
   for (const lead of targets) {
-    if (isBlacklisted(lead.phone)) {
-      console.log('Skipping blacklisted:', lead.name);
-      continue;
-    }
-    if (conversations[lead.phone]) {
-      console.log('Already contacted:', lead.name);
-      continue;
-    }
+    if (isBlacklisted(lead.phone)) { console.log('Skipping blacklisted:', lead.name); continue; }
+    if (conversations[lead.phone]) { console.log('Already contacted:', lead.name); continue; }
     const openingMessage = `Hi! I noticed ${lead.name} online. I help local ${lead.type.toLowerCase()}s automatically text back any missed calls so customers don't go elsewhere. Free 14 day trial — takes 2 mins to set up. Worth a quick chat?`;
     conversations[lead.phone] = {
       lead,
@@ -214,7 +258,7 @@ app.post('/start-outreach', async (req, res) => {
 });
 
 app.get('/conversations', (req, res) => {
-  res.json({ conversations, closedDeals, cancelledClients, leads, clientStatuses });
+  res.json({ conversations, closedDeals, cancelledClients, leads, clientStatuses, pendingAssignment, twilioInventory });
 });
 
 app.post('/add-lead', (req, res) => {
@@ -227,51 +271,51 @@ app.post('/add-lead', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/add-inventory', (req, res) => {
+  const { number, friendlyName } = req.body;
+  if (!number) return res.json({ success: false, error: 'Missing number' });
+  const existing = twilioInventory.find(n => n.number === number);
+  if (existing) return res.json({ success: false, error: 'Number already in inventory' });
+  twilioInventory.push({
+    number,
+    friendlyName: friendlyName || number,
+    status: 'available',
+    addedAt: new Date().toISOString()
+  });
+  res.json({ success: true });
+});
+
+app.post('/assign-number', async (req, res) => {
+  const { clientPhone, twilioNumber } = req.body;
+  const result = await assignNumber(clientPhone, twilioNumber);
+  res.json(result);
+});
+
 app.post('/update-status', async (req, res) => {
   const { phone, status } = req.body;
   if (!phone || !status) return res.json({ success: false });
   clientStatuses[phone] = status;
   const deal = closedDeals.find(d => d.phone === phone);
   if (deal) deal.status = status;
-
   if (status === 'cancelled') {
     const name = deal ? deal.name : phone;
     if (!cancelledClients.find(c => c.phone === phone)) {
-      cancelledClients.push({
-        phone,
-        name,
-        cancelledAt: new Date().toISOString(),
-        reason: 'manual'
-      });
+      cancelledClients.push({ phone, name, cancelledAt: new Date().toISOString(), reason: 'manual' });
     }
-    try {
-      await axios.post(`${BRIGHTREPLY_URL}/cancel-client`, { phone });
-    } catch(e) {
-      console.log('Could not disable on BrightReply');
-    }
-    await sendTelegram(
-      `❌ <b>Client cancelled — ${name}</b>\n` +
-      `Phone: ${phone}\n` +
-      `Time: ${new Date().toLocaleString()}`
-    );
+    try { await axios.post(`${BRIGHTREPLY_URL}/cancel-client`, { phone }); } catch(e) {}
+    await sendTelegram(`❌ <b>Client cancelled — ${name}</b>\nPhone: ${phone}`);
   }
-
   if (status === 'paid') {
     const name = deal ? deal.name : phone;
-    await sendTelegram(
-      `💰 <b>Client paid — ${name}</b>\n` +
-      `Phone: ${phone}\n` +
-      `Time: ${new Date().toLocaleString()}`
-    );
+    await sendTelegram(`💰 <b>Client paid — ${name}</b>\nPhone: ${phone}`);
   }
-
   res.json({ success: true });
 });
 
 app.post('/send-payment-link', async (req, res) => {
   const { phone, name } = req.body;
-  const stripeLink = process.env.STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/your-link-here';
-  await sendSMS(phone, `Hi ${name}! Your 14 day free trial of BrightReply has ended. To continue receiving missed call replies, here is your payment link: ${stripeLink} — just £29/month, cancel any time. Any questions just reply here!`);
+  const stripeLink = STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/your-link-here';
+  await sendSMS(phone, `Hi ${name}! Your 14 day free trial of BrightReply has ended. To keep your missed call replies running it is just £29/month: ${stripeLink} — cancel any time. Any questions just reply here!`);
   res.json({ success: true });
 });
 
@@ -285,7 +329,7 @@ app.get('/search', (req, res) => {
   ];
   const seen = new Set();
   const results = allEntries.filter(e => {
-    const match = (e.name || '').toLowerCase().includes(q) || (e.phone || '').includes(q);
+    const match = (e.name||'').toLowerCase().includes(q) || (e.phone||'').includes(q);
     if (!match || seen.has(e.phone)) return false;
     seen.add(e.phone);
     return true;
