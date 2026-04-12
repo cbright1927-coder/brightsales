@@ -346,7 +346,64 @@ app.post('/set-auto-buy', (req, res) => {
   console.log('Auto-buy set to:', autoBuyEnabled);
   res.json({ success: true, autoBuyEnabled });
 });
+app.post('/find-leads', async (req, res) => {
+  const { town, type } = req.body;
+  if (!town || !type) return res.json({ success: false, error: 'Missing town or type' });
 
+  const GOOGLE_KEY = process.env.GOOGLE_PLACES_KEY;
+  const query = `${type} in ${town} Wales`;
+
+  try {
+    const searchRes = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
+      params: { query, key: GOOGLE_KEY }
+    });
+
+    const places = searchRes.data.results || [];
+    const newLeads = [];
+    const skipped = [];
+
+    for (const place of places.slice(0, 20)) {
+      try {
+        const detailRes = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
+          params: {
+            place_id: place.place_id,
+            fields: 'name,formatted_phone_number,website',
+            key: GOOGLE_KEY
+          }
+        });
+
+        const details = detailRes.data.result || {};
+        const phone = details.formatted_phone_number;
+        const website = details.website;
+        const name = place.name;
+
+        if (!phone) { skipped.push({ name, reason: 'no phone' }); continue; }
+
+        let formattedPhone = phone.replace(/\s/g, '');
+        if (formattedPhone.startsWith('0')) formattedPhone = '+44' + formattedPhone.slice(1);
+        if (!formattedPhone.startsWith('+')) formattedPhone = '+44' + formattedPhone;
+
+        if (isBlacklisted(formattedPhone)) { skipped.push({ name, reason: 'blacklisted' }); continue; }
+        if (leads.find(l => l.phone === formattedPhone)) { skipped.push({ name, reason: 'already exists' }); continue; }
+        if (closedDeals.find(d => d.phone === formattedPhone)) { skipped.push({ name, reason: 'already a client' }); continue; }
+
+        if (website) { skipped.push({ name, reason: 'has website' }); continue; }
+
+        leads.push({ name, type, phone: formattedPhone });
+        newLeads.push({ name, phone: formattedPhone });
+
+        await new Promise(r => setTimeout(r, 200));
+      } catch(e) {
+        console.error('Place detail error:', e.message);
+      }
+    }
+
+    res.json({ success: true, found: newLeads.length, skipped: skipped.length, leads: newLeads });
+  } catch(e) {
+    console.error('Places search error:', e.message);
+    res.json({ success: false, error: e.message });
+  }
+});
 app.get('/search', (req, res) => {
   const q = (req.query.q || '').toLowerCase().trim();
   if (!q) return res.json({ results: [] });
