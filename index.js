@@ -23,7 +23,11 @@ const closedDeals = [];
 const cancelledClients = [];
 const pendingAssignment = [];
 const twilioInventory = [];
-const leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
+let leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
+
+function saveLeads() {
+  fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+}
 const clientStatuses = {};
 let autoBuyEnabled = false;
 
@@ -291,6 +295,7 @@ app.post('/add-lead', (req, res) => {
   const existing = leads.find(l => l.phone === phone);
   if (existing) return res.json({ success: false, error: 'Already exists' });
   leads.push({ name, type, phone });
+saveLeads();
   res.json({ success: true });
 });
 
@@ -391,6 +396,7 @@ app.post('/find-leads', async (req, res) => {
        
 
         leads.push({ name, type, phone: formattedPhone });
+saveLeads();
         newLeads.push({ name, phone: formattedPhone });
 
         await new Promise(r => setTimeout(r, 200));
