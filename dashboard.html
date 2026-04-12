@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0b0f">
+<title>BrightSales</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:#0a0b0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+.screen{display:none}
+.screen.active{display:block}
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.header h1{font-size:22px;font-weight:800;color:#f0f0f0}
+.header h1 span{color:#00c896}
+.badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;background:#0a1f14;color:#00c896;border:0.5px solid #166534}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:12px}
+.stat{background:#111318;border-radius:14px;padding:12px;border:0.5px solid #1a1d2e;text-align:center}
+.stat-label{font-size:10px;color:#475569;margin-bottom:4px;font-weight:500}
+.stat-value{font-size:22px;font-weight:800}
+.green{color:#00c896}.red{color:#f87171}.amber{color:#fbbf24}.blue{color:#60a5fa}.white{color:#f0f0f0}.muted{color:#64748b}
+.pad{padding:0 16px}
+.card{background:#111318;border-radius:16px;padding:14px 16px;margin-bottom:10px;border:0.5px solid #1a1d2e}
+.card-title{font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;font-weight:600}
+.btn{border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .15s;width:100%;margin-bottom:8px}
+.btn:active{transform:scale(.97)}
+.btn-green{background:#00c896;color:#000}
+.btn-blue{background:#1e3a5f;color:#60a5fa;border:0.5px solid #2a4a6f}
+.btn-red{background:#3b1f1f;color:#f87171;border:0.5px solid #7f1d1d}
+.input{width:100%;background:#0a0b0f;border:0.5px solid #1a1d2e;border-radius:10px;padding:11px 14px;color:#f0f0f0;font-size:13px;outline:none;margin-bottom:8px;font-family:-apple-system,sans-serif}
+.input:focus{border-color:#00c896}
+.input::placeholder{color:#475569}
+.select{width:100%;background:#0a0b0f;border:0.5px solid #1a1d2e;border-radius:10px;padding:11px 14px;color:#f0f0f0;font-size:13px;outline:none;margin-bottom:8px;-webkit-appearance:none}
+.lead-card{background:#0a0b0f;border-radius:12px;padding:12px 14px;margin-bottom:8px;border:0.5px solid #1a1d2e;cursor:pointer;transition:border-color .15s}
+.lead-card:active{border-color:#00c896}
+.lead-card.closed{border-color:#166534;background:#0a1f14}
+.lead-card.pending{border-color:#92400e;background:#1a1200}
+.lead-card.replied{border-color:#1e3a5f;background:#0a0f1f}
+.lead-name{font-size:14px;font-weight:600;color:#f0f0f0;margin-bottom:2px}
+.lead-meta{font-size:12px;color:#64748b}
+.status-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px}
+.pill-new{background:#1a1d2e;color:#64748b}
+.pill-sent{background:#0f1f35;color:#60a5fa}
+.pill-replied{background:#1a1200;color:#fbbf24}
+.pill-closed{background:#0a1f14;color:#00c896}
+.pill-declined{background:#1f0a0a;color:#f87171}
+.chat-view{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0a0b0f;z-index:100;flex-direction:column}
+.chat-view.open{display:flex}
+.chat-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:0.5px solid #1a1d2e;flex-shrink:0}
+.back-btn{background:none;border:none;color:#00c896;font-size:13px;cursor:pointer;font-weight:600;padding:4px 0}
+.chat-name{font-size:15px;font-weight:700;color:#f0f0f0}
+.chat-type{font-size:11px;color:#64748b}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;word-break:break-word}
+.msg-out{background:#00c896;color:#000;align-self:flex-end;border-bottom-right-radius:4px;font-weight:500}
+.msg-in{background:#111318;color:#f0f0f0;align-self:flex-start;border-bottom-left-radius:4px;border:0.5px solid #1a1d2e}
+.msg-time{font-size:10px;opacity:.6;margin-top:3px}
+.fire-btn{margin:12px 16px;padding:13px;background:#00c896;color:#000;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;width:calc(100% - 32px)}
+.empty{color:#475569;font-size:13px;text-align:center;padding:32px 0}
+.nav{display:flex;background:#0a0b0f;border-top:0.5px solid #1a1d2e;padding-top:8px;padding-bottom:env(safe-area-inset-bottom,14px);flex-shrink:0}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;background:none;border:none;cursor:pointer;color:#475569;font-size:10px;font-weight:500}
+.nav-btn.active{color:#00c896}
+.nav-icon{width:22px;height:22px;margin-bottom:1px}
+.success-banner{background:#0a1f14;border:0.5px solid #166534;border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:13px;color:#00c896;display:none}
+.success-banner.show{display:block}
+</style>
+</head>
+<body>
+
+<div id="chat-view" class="chat-view">
+  <div class="chat-header">
+    <button class="back-btn" onclick="closeChat()">← Back</button>
+    <div>
+      <div class="chat-name" id="chat-lead-name"></div>
+      <div class="chat-type" id="chat-lead-type"></div>
+    </div>
+  </div>
+  <div class="chat-messages" id="chat-messages-view"></div>
+  <button class="fire-btn" id="fire-single-btn" onclick="fireSingle()">Send opening message</button>
+</div>
+
+<div id="content">
+
+  <div id="home" class="screen active">
+    <div class="header"><h1>Bright<span>Sales</span></h1><span class="badge">Live</span></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total leads</div><div class="stat-value white" id="s-total">0</div></div>
+      <div class="stat"><div class="stat-label">Replied</div><div class="stat-value amber" id="s-replied">0</div></div>
+      <div class="stat"><div class="stat-label">Closed</div><div class="stat-value green" id="s-closed">0</div></div>
+    </div>
+    <div class="pad">
+      <div id="success-msg" class="success-banner">Lead added successfully!</div>
+      <button class="btn btn-green" onclick="fireAll()">🚀 Start outreach to all new leads</button>
+      <div class="card">
+        <div class="card-title">All leads</div>
+        <div id="leads-list"><div class="empty">No leads yet — add some below!</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="add-screen" class="screen">
+    <div class="header"><h1>Add <span>Lead</span></h1></div>
+    <div class="pad">
+      <div class="card">
+        <div class="card-title">Business details</div>
+        <input class="input" id="lead-name" placeholder="Business name e.g. Sara's Hair Salon">
+        <select class="select" id="lead-type">
+          <option value="Hair salon">Hair salon</option>
+          <option value="Barber">Barber</option>
+          <option value="Beauty salon">Beauty salon</option>
+          <option value="Nail salon">Nail salon</option>
+          <option value="Plumber">Plumber</option>
+          <option value="Electrician">Electrician</option>
+          <option value="Garage">Garage</option>
+          <option value="Restaurant">Restaurant</option>
+          <option value="Other">Other</option>
+        </select>
+        <input class="input" id="lead-phone" placeholder="Phone number e.g. 01633 123456">
+        <button class="btn btn-green" onclick="addLead()">Add lead</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Tips for finding leads</div>
+        <div style="font-size:13px;color:#64748b;line-height:1.7">
+          Search Google Maps for "hair salon [your town]" — tap on each result to get their number. Best targets are ones with no online booking system.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="closed-screen" class="screen">
+    <div class="header"><h1>Closed <span>Deals</span></h1></div>
+    <div class="pad">
+      <div class="card">
+        <div class="card-title">Won clients</div>
+        <div id="closed-list"><div class="empty">No closed deals yet — keep going!</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showScreen('home',this)">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Leads
+  </button>
+  <button class="nav-btn" onclick="showScreen('add-screen',this)">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Add Lead
+  </button>
+  <button class="nav-btn" onclick="showScreen('closed-screen',this)">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+    Closed
+  </button>
+</nav>
+
+<script>
+let appData = { conversations: {}, closedDeals: [], leads: [] };
+let currentPhone = null;
+
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/conversations');
+    appData = await res.json();
+    renderLeads();
+    renderClosed();
+    updateStats();
+  } catch(e) { console.error(e); }
+}
+
+function updateStats() {
+  const convs = Object.values(appData.conversations);
+  const closed = appData.closedDeals || [];
+  const replied = convs.filter(c => c.messages && c.messages.length > 1).length;
+  document.getElementById('s-total').textContent = appData.leads ? appData.leads.length : convs.length;
+  document.getElementById('s-replied').textContent = replied;
+  document.getElementById('s-closed').textContent = closed.length;
+}
+
+function getStatus(phone) {
+  const closed = appData.closedDeals || [];
+  if (closed.find(d => d.phone === phone)) return 'closed';
+  const conv = appData.conversations[phone];
+  if (!conv) return 'new';
+  if (conv.messages && conv.messages.length > 1) {
+    const lastMsg = conv.messages[conv.messages.length - 1];
+    if (lastMsg.role === 'user') return 'replied';
+    return 'sent';
+  }
+  return 'sent';
+}
+
+function getStatusPill(status) {
+  const map = {
+    new: '<span class="status-pill pill-new">New</span>',
+    sent: '<span class="status-pill pill-sent">Sent</span>',
+    replied: '<span class="status-pill pill-replied">Replied !</span>',
+    closed: '<span class="status-pill pill-closed">Closed ✓</span>',
+    declined: '<span class="status-pill pill-declined">Declined</span>'
+  };
+  return map[status] || map.new;
+}
+
+function renderLeads() {
+  const el = document.getElementById('leads-list');
+  const leads = appData.leads || [];
+  const convPhones = Object.keys(appData.conversations);
+  const allPhones = [...new Set([...leads.map(l => l.phone), ...convPhones])];
+
+  if (allPhones.length === 0) { el.innerHTML = '<div class="empty">No leads yet</div>'; return; }
+
+  const items = allPhones.map(phone => {
+    const lead = leads.find(l => l.phone === phone) || appData.conversations[phone]?.lead || { name: phone, type: 'Unknown' };
+    const status = getStatus(phone);
+    return { phone, lead, status };
+  }).sort((a, b) => {
+    const order = { replied: 0, closed: 1, sent: 2, new: 3 };
+    return (order[a.status] || 3) - (order[b.status] || 3);
+  });
+
+  el.innerHTML = items.map(({ phone, lead, status }) =>
+    `<div class="lead-card ${status}" onclick="openChat('${phone}')">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="lead-name">${lead.name}${getStatusPill(status)}</div>
+      </div>
+      <div class="lead-meta">${lead.type} · ${phone}</div>
+    </div>`
+  ).join('');
+}
+
+function renderClosed() {
+  const el = document.getElementById('closed-list');
+  const closed = appData.closedDeals || [];
+  if (!closed.length) { el.innerHTML = '<div class="empty">No closed deals yet</div>'; return; }
+  el.innerHTML = closed.map(d =>
+    `<div class="lead-card closed">
+      <div class="lead-name">${d.name} ✓</div>
+      <div class="lead-meta">${d.type} · Closed ${new Date(d.closedAt).toLocaleDateString()}</div>
+    </div>`
+  ).join('');
+}
+
+function openChat(phone) {
+  currentPhone = phone;
+  const conv = appData.conversations[phone];
+  const lead = (appData.leads || []).find(l => l.phone === phone) || conv?.lead || { name: phone, type: '' };
+  const status = getStatus(phone);
+
+  document.getElementById('chat-lead-name').textContent = lead.name;
+  document.getElementById('chat-lead-type').textContent = lead.type;
+
+  const msgs = document.getElementById('chat-messages-view');
+  if (conv && conv.messages && conv.messages.length) {
+    msgs.innerHTML = conv.messages.map(m =>
+      `<div class="msg ${m.role === 'assistant' ? 'msg-out' : 'msg-in'}">${m.content}</div>`
+    ).join('');
+    setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+  } else {
+    msgs.innerHTML = '<div class="empty">No messages yet — send the opening message!</div>';
+  }
+
+  const fireBtn = document.getElementById('fire-single-btn');
+  if (status === 'closed') {
+    fireBtn.textContent = '✓ Deal closed';
+    fireBtn.style.background = '#0a1f14';
+    fireBtn.style.color = '#00c896';
+    fireBtn.style.border = '0.5px solid #166534';
+    fireBtn.disabled = true;
+  } else if (status === 'sent' || status === 'replied') {
+    fireBtn.textContent = 'Waiting for reply...';
+    fireBtn.style.background = '#1a1d2e';
+    fireBtn.style.color = '#64748b';
+    fireBtn.disabled = true;
+  } else {
+    fireBtn.textContent = 'Send opening message';
+    fireBtn.style.background = '#00c896';
+    fireBtn.style.color = '#000';
+    fireBtn.disabled = false;
+  }
+
+  document.getElementById('chat-view').classList.add('open');
+}
+
+function closeChat() {
+  document.getElementById('chat-view').classList.remove('open');
+  currentPhone = null;
+  loadData();
+}
+
+async function fireSingle() {
+  if (!currentPhone) return;
+  const lead = (appData.leads || []).find(l => l.phone === currentPhone);
+  if (!lead) return;
+  try {
+    await fetch('/start-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phones: [currentPhone] })
+    });
+    document.getElementById('fire-single-btn').textContent = 'Message sent!';
+    document.getElementById('fire-single-btn').style.background = '#0a1f14';
+    document.getElementById('fire-single-btn').style.color = '#00c896';
+    setTimeout(() => { closeChat(); loadData(); }, 1500);
+  } catch(e) { alert('Error sending message'); }
+}
+
+async function fireAll() {
+  if (!confirm('Send opening messages to all new leads?')) return;
+  try {
+    await fetch('/start-outreach', { method: 'POST' });
+    alert('Outreach started! Check Telegram for updates.');
+    loadData();
+  } catch(e) { alert('Error starting outreach'); }
+}
+
+async function addLead() {
+  const name = document.getElementById('lead-name').value.trim();
+  const type = document.getElementById('lead-type').value;
+  let phone = document.getElementById('lead-phone').value.trim();
+
+  if (!name || !phone) { alert('Please fill in name and phone number'); return; }
+
+  phone = phone.replace(/\s/g, '');
+  if (phone.startsWith('0')) phone = '+44' + phone.slice(1);
+  if (!phone.startsWith('+')) phone = '+44' + phone;
+
+  try {
+    const res = await fetch('/add-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, type, phone })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('lead-name').value = '';
+      document.getElementById('lead-phone').value = '';
+      const banner = document.getElementById('success-msg');
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 3000);
+      showScreen('home', document.querySelector('.nav-btn'));
+      loadData();
+    }
+  } catch(e) { alert('Error adding lead'); }
+}
+
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>
