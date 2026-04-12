@@ -71,7 +71,11 @@ Your goal is to:
 1. Explain the service simply and clearly
 2. Handle any objections naturally and honestly
 3. Close the deal — get them to agree to try it free for 14 days
-4. Once they agree, respond with exactly: DEAL_CLOSED
+4. Once they agree, ask them this exact question: "Almost done! What would you like your automatic text reply to say when customers call and get no answer? Keep it short and friendly — I will set it up exactly as you write it 😊"
+5. Wait for their reply with the custom message
+6. Once they give you their custom message, respond with exactly:
+DEAL_CLOSED
+CUSTOM_MESSAGE: [their exact message here]
 
 Key facts:
 - 14 day free trial, no card needed to start
@@ -84,11 +88,10 @@ Tone:
 - Friendly and natural, not robotic
 - Like a real person texting
 - Keep messages short — 2-3 sentences max
-- Don't use bullet points in SMS
-- Be honest, don't oversell
+- Do not use bullet points in SMS
+- Be honest, do not oversell
 
-If they say no or not interested, be polite and wish them well. Do not keep pushing.
-If they agree or say yes, respond with DEAL_CLOSED on its own line.`;
+If they say no or not interested, be polite and wish them well. Do not keep pushing.`;
 }
 
 function getSetupGuide(lead, twilioNumber) {
@@ -124,7 +127,10 @@ async function handleReply(from, body) {
   const reply = await askClaude(getSystemPrompt(conv.lead), conv.messages);
 
   if (reply.includes('DEAL_CLOSED')) {
-    await handleDealClosed(from, conv);
+    const lines = reply.split('\n');
+    const customLine = lines.find(l => l.startsWith('CUSTOM_MESSAGE:'));
+    const customMessage = customLine ? customLine.replace('CUSTOM_MESSAGE:', '').trim() : null;
+    await handleDealClosed(from, conv, customMessage);
     return;
   }
 
@@ -132,14 +138,17 @@ async function handleReply(from, body) {
   await sendSMS(from, reply);
 }
 
-async function handleDealClosed(phone, conv) {
+async function handleDealClosed(phone, conv, customMessage) {
   const lead = conv.lead;
-  console.log('DEAL CLOSED:', lead.name);
+  console.log('DEAL CLOSED:', lead.name, '| Custom message:', customMessage);
+
+  const finalMessage = customMessage || `Hi! Sorry we missed your call at ${lead.name}. We will ring you back shortly — or reply here to book!`;
 
   closedDeals.push({
     name: lead.name,
     type: lead.type,
     phone,
+    customMessage: finalMessage,
     closedAt: new Date().toISOString()
   });
 
@@ -150,6 +159,7 @@ async function handleDealClosed(phone, conv) {
     `🎉 <b>New client closed — ${lead.name}</b>\n` +
     `Type: ${lead.type}\n` +
     `Phone: ${phone}\n` +
+    `Custom message: ${finalMessage}\n` +
     `Time: ${new Date().toLocaleString()}`
   );
 
@@ -159,9 +169,9 @@ async function handleDealClosed(phone, conv) {
       type: lead.type,
       phone,
       twilioNumber: SALES_NUMBER,
-      message: `Hi! Sorry we missed your call at ${lead.name}. We will ring you back shortly — or reply here to book!`
+      message: finalMessage
     });
-    console.log('Client added to BrightReply');
+    console.log('Client added to BrightReply with custom message');
   } catch(e) {
     console.log('Could not auto-add to BrightReply — add manually');
   }
