@@ -210,8 +210,22 @@ app.get('/conversations', (req, res) => {
   res.json({ conversations, closedDeals, leads });
 });
 
+app.post('/add-lead', (req, res) => {
+  const { name, type, phone } = req.body;
+  if (!name || !phone) return res.json({ success: false, error: 'Missing fields' });
+  const existing = leads.find(l => l.phone === phone);
+  if (existing) return res.json({ success: false, error: 'Already exists' });
+  leads.push({ name, type, phone });
+  res.json({ success: true });
+});
+
 app.get('/', (req, res) => {
-  res.send('BrightSales is running');
+  const fs2 = require('fs');
+  if (fs2.existsSync('dashboard.html')) {
+    res.send(fs2.readFileSync('dashboard.html', 'utf8'));
+  } else {
+    res.send('BrightSales is running');
+  }
 });
 
 const PORT = process.env.PORT || 3000;
