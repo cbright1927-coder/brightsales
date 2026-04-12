@@ -81,7 +81,7 @@ CUSTOM_MESSAGE: [their exact message here]
 
 Key facts:
 - 14 day free trial, no card needed to start
-- £29/month after that, cancel any time
+£14.99/month after that, cancel any time
 - Takes 2 minutes to set up on their phone
 - When a customer calls and gets no answer, they automatically get a text back
 - Saves lost customers — one saved booking pays for months of the service
@@ -110,7 +110,7 @@ Here is how to activate it in 2 minutes:
 
 To test it: call your number from another phone and do not answer. You should get a text back within seconds.
 
-Your 14 day free trial starts now. After that it is just £29/month — I will send you a payment link before the trial ends.
+Your 14 day free trial starts now. After that it is just £14.99/month — I will send you a payment link before the trial ends.
 
 Any questions just reply here! 😊`;
 }
@@ -338,7 +338,7 @@ app.post('/update-status', async (req, res) => {
 app.post('/send-payment-link', async (req, res) => {
   const { phone, name } = req.body;
   const stripeLink = STRIPE_PAYMENT_LINK || 'https://buy.stripe.com/your-link-here';
-  await sendSMS(phone, `Hi ${name}! Your 14 day free trial of BrightReply has ended. To keep your missed call replies running it is just £29/month: ${stripeLink} — cancel any time. Any questions just reply here!`);
+  await sendSMS(phone, `Hi ${name}! Your 14 day free trial of BrightReply has ended. To keep your missed call replies running it is just £14.99/month: ${stripeLink} — cancel any time. Any questions just reply here!`);
   res.json({ success: true });
 });
 
