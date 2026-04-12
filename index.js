@@ -56,6 +56,11 @@ const pendingAssignment = saved.pendingAssignment || [];
 const twilioInventory = saved.twilioInventory || [];
 const clientStatuses = saved.clientStatuses || {};
 const declined = saved.declined || [];
+function loadLeads() {
+  try { return JSON.parse(fs.readFileSync('leads.json', 'utf8')); }
+  catch(e) { return []; }
+}
+let leads = loadLeads();
 let autoBuyEnabled = false;
 
 async function sendTelegram(message) {
