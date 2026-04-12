@@ -18,11 +18,20 @@ const STRIPE_PAYMENT_LINK = process.env.STRIPE_PAYMENT_LINK;
 
 const client = twilio(TWILIO_SID, TWILIO_TOKEN);
 
+function loadState() {
+  try { return JSON.parse(fs.readFileSync('state.json', 'utf8')); }
+  catch(e) { return { declined: [] }; }
+}
+function saveState() {
+  fs.writeFileSync('state.json', JSON.stringify({ declined }, null, 2));
+}
 const conversations = {};
 const closedDeals = [];
 const cancelledClients = [];
 const pendingAssignment = [];
 const twilioInventory = [];
+const state = loadState();
+let declined = state.declined || [];
 let leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
 
 function saveLeads() {
@@ -97,7 +106,8 @@ Tone:
 - Do not use bullet points in SMS
 - Be honest, do not oversell
 
-If they say no or not interested, be polite and wish them well. Do not keep pushing.`;
+If they say no or not interested, be polite, wish them well, then on a new line write exactly: NOT_INTERESTED
+Do not keep pushing after they decline.`;
 }
 
 function getSetupGuide(lead, twilioNumber) {
@@ -120,7 +130,14 @@ Any questions just reply here! 😊`;
 }
 
 function isBlacklisted(phone) {
-  return cancelledClients.some(c => c.phone === phone);
+  return cancelledClients.some(c => c.phone === phone) || declined.includes(phone);
+}
+
+function markDeclined(phone) {
+  if (!declined.includes(phone)) {
+    declined.push(phone);
+    saveState();
+  }
 }
 
 async function handleReply(from, body) {
@@ -137,12 +154,19 @@ async function handleReply(from, body) {
   console.log(`Reply from ${conv.lead.name}: ${body}`);
   const reply = await askClaude(getSystemPrompt(conv.lead), conv.messages);
   if (reply.includes('DEAL_CLOSED')) {
-    const lines = reply.split('\n');
-    const customLine = lines.find(l => l.startsWith('CUSTOM_MESSAGE:'));
-    const customMessage = customLine ? customLine.replace('CUSTOM_MESSAGE:', '').trim() : null;
-    await handleDealClosed(from, conv, customMessage);
-    return;
-  }
+  const lines = reply.split('\n');
+  const customLine = lines.find(l => l.startsWith('CUSTOM_MESSAGE:'));
+  const customMessage = customLine ? customLine.replace('CUSTOM_MESSAGE:', '').trim() : null;
+  await handleDealClosed(from, conv, customMessage);
+  return;
+}
+if (reply.includes('NOT_INTERESTED')) {
+  markDeclined(from);
+  const cleanReply = reply.replace('NOT_INTERESTED', '').trim();
+  conv.messages.push({ role: 'assistant', content: cleanReply });
+  await sendSMS(from, cleanReply);
+  return;
+}
   conv.messages.push({ role: 'assistant', content: reply });
   await sendSMS(from, reply);
 }
