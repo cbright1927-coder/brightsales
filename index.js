@@ -27,8 +27,7 @@ let leadsCol;
 async function connectDB() {
   try {
     const mongoClient = new MongoClient(MONGODB_URI, {
-  tls: true,
-  tlsAllowInvalidCertificates: false
+  serverSelectionTimeoutMS: 5000
 });
     await mongoClient.connect();
     db = mongoClient.db('brightsales');
