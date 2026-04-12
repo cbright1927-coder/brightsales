@@ -18,26 +18,44 @@ const STRIPE_PAYMENT_LINK = process.env.STRIPE_PAYMENT_LINK;
 
 const client = twilio(TWILIO_SID, TWILIO_TOKEN);
 
-function loadState() {
-  try { return JSON.parse(fs.readFileSync('state.json', 'utf8')); }
-  catch(e) { return { declined: [] }; }
-}
-function saveState() {
-  fs.writeFileSync('state.json', JSON.stringify({ declined }, null, 2));
-}
-const conversations = {};
-const closedDeals = [];
-const cancelledClients = [];
-const pendingAssignment = [];
-const twilioInventory = [];
-const state = loadState();
-let declined = state.declined || [];
-let leads = JSON.parse(fs.readFileSync('leads.json', 'utf8'));
 
-function saveLeads() {
-  fs.writeFileSync('leads.json', JSON.stringify(leads, null, 2));
+
+const DATA_FILE = 'data.json';
+
+function loadData() {
+  try {
+    const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    return d;
+  } catch(e) {
+    return {};
+  }
 }
-const clientStatuses = {};
+
+function saveData() {
+  const d = {
+    conversations,
+    closedDeals,
+    cancelledClients,
+    clientStatuses,
+    pendingAssignment,
+    twilioInventory,
+    declined
+  };
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
+  } catch(e) {
+    console.error('Could not save data:', e.message);
+  }
+}
+
+const saved = loadData();
+const conversations = saved.conversations || {};
+const closedDeals = saved.closedDeals || [];
+const cancelledClients = saved.cancelledClients || [];
+const pendingAssignment = saved.pendingAssignment || [];
+const twilioInventory = saved.twilioInventory || [];
+const clientStatuses = saved.clientStatuses || {};
+const declined = saved.declined || [];
 let autoBuyEnabled = false;
 
 async function sendTelegram(message) {
@@ -136,7 +154,7 @@ function isBlacklisted(phone) {
 function markDeclined(phone) {
   if (!declined.includes(phone)) {
     declined.push(phone);
-    saveState();
+    saveData();
   }
 }
 
@@ -164,10 +182,12 @@ if (reply.includes('NOT_INTERESTED')) {
   markDeclined(from);
   const cleanReply = reply.replace('NOT_INTERESTED', '').trim();
   conv.messages.push({ role: 'assistant', content: cleanReply });
+  saveData();
   await sendSMS(from, cleanReply);
   return;
 }
   conv.messages.push({ role: 'assistant', content: reply });
+  saveData();
   await sendSMS(from, reply);
 }
 
@@ -214,6 +234,7 @@ async function handleDealClosed(phone, conv, customMessage) {
   });
 
   clientStatuses[phone] = 'pending';
+  saveData();
 
   await sendTelegram(
     `🎉 <b>New deal closed — ${lead.name}</b>\n` +
@@ -246,6 +267,7 @@ async function assignNumber(clientPhone, twilioNumber) {
     deal.status = 'trial';
   }
   clientStatuses[clientPhone] = 'trial';
+  saveData();
 
   const idx = pendingAssignment.findIndex(p => p.phone === clientPhone);
   if (idx > -1) pendingAssignment.splice(idx, 1);
@@ -304,6 +326,7 @@ async function startOutreach(specificPhones, limit) {
       startedAt: new Date().toISOString()
     };
     await sendSMS(lead.phone, openingMessage);
+    saveData();
     count++;
     await new Promise(r => setTimeout(r, 3000));
   }
@@ -334,7 +357,7 @@ app.post('/add-lead', (req, res) => {
   const existing = leads.find(l => l.phone === phone);
   if (existing) return res.json({ success: false, error: 'Already exists' });
   leads.push({ name, type, phone });
-saveLeads();
+saveData();
   res.json({ success: true });
 });
 
@@ -349,6 +372,7 @@ app.post('/add-inventory', (req, res) => {
     status: 'available',
     addedAt: new Date().toISOString()
   });
+  saveData();
   res.json({ success: true });
 });
 
@@ -376,6 +400,7 @@ app.post('/update-status', async (req, res) => {
     const name = deal ? deal.name : phone;
     await sendTelegram(`💰 <b>Client paid — ${name}</b>\nPhone: ${phone}`);
   }
+  saveData();
   res.json({ success: true });
 });
 
@@ -435,7 +460,7 @@ app.post('/find-leads', async (req, res) => {
        
 
         leads.push({ name, type, phone: formattedPhone });
-saveLeads();
+saveData();
         newLeads.push({ name, phone: formattedPhone });
 
         await new Promise(r => setTimeout(r, 200));
