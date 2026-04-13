@@ -185,6 +185,8 @@ To test it: call your number from another phone and do not answer. You should ge
 
 Your 14 day free trial starts now. After that it is just £14.99/month — I will send you a payment link before the trial ends.
 
+To update your auto-reply message anytime just text CHANGE to this number: ${twilioNumber}
+
 Any questions just reply here! 😊`;
 }
 
@@ -453,6 +455,13 @@ app.post('/send-payment-link', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/remove-deal', (req, res) => {
+  const { phone } = req.body;
+  const idx = closedDeals.findIndex(d => d.phone === phone);
+  if(idx > -1) closedDeals.splice(idx, 1);
+  saveData();
+  res.json({ success: true });
+});
 app.post('/set-auto-buy', (req, res) => {
   autoBuyEnabled = req.body.enabled === true;
   console.log('Auto-buy set to:', autoBuyEnabled);
